@@ -19,7 +19,7 @@ router=Router()
 
 @router.message(CommandStart())
 async def cmd_start(message: Message):
-    await message.answer("Добро пожаловать!","Нажмите Список для просмотра клиентов")
+    await message.answer("Добро пожаловать! Нажмите Список для просмотра клиентов")
 
 @router.message(Command("/list"))
 async def cmd_list(message: Message):
