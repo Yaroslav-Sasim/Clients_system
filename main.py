@@ -21,7 +21,7 @@ router=Router()
 async def cmd_start(message: Message):
     await message.answer("Добро пожаловать!","Нажмите Список для просмотра клиентов")
 
-@router.message(Command("list"))
+@router.message(Command("/list"))
 async def cmd_list(message: Message):
     try:
         response=supabase.table("clients").select("*").execute()
