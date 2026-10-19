@@ -18,7 +18,7 @@ SUPABASE_URL = os.getenv("SUPABASE_URL")
 bot = Bot(token=BOT_TOKEN)
 supabase: Client=create_client(SUPABASE_URL,SUPABASE_KEY)
 
-dp-=Dispatcher()
+dp=Dispatcher()
 
 
 @dp.message(CommandStart())
