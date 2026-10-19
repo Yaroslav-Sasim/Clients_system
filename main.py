@@ -1,6 +1,8 @@
 import asyncio
 import logging
 import os
+
+import dp
 from aiogram import Bot, Dispatcher, Router
 from aiogram.filters import Command, CommandStart
 from aiogram.types import Message
@@ -15,13 +17,15 @@ SUPABASE_URL = os.getenv("SUPABASE_URL")
 
 bot = Bot(token=BOT_TOKEN)
 supabase: Client=create_client(SUPABASE_URL,SUPABASE_KEY)
-router=Router()
 
-@router.message(CommandStart())
+dp-=Dispatcher()
+
+
+@dp.message(CommandStart())
 async def cmd_start(message: Message):
     await message.answer("Добро пожаловать! Нажмите Список для просмотра клиентов")
 
-@router.message(Command("/list"))
+@dp.message(Command("/list"))
 async def cmd_list(message: Message):
     try:
         response=supabase.table("clients").select("*").execute()
@@ -41,8 +45,7 @@ async def cmd_list(message: Message):
         await message.answer(f"Ошибка чтения {e}")
 
 async def main():
-    dp=Dispatcher()
-    dp.include_router(router)
+
     print("Запущен бот")
     await dp.start_polling(bot)
 
