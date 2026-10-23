@@ -105,11 +105,11 @@ async def process_mail(message: Message, state:FSMContext):
       await message.answer("Пользователь сохранен")
     except Exception as e:
         await message.answer("Ошибка записи")
-        await state.clear()
+    await state.clear()
 #Добавление клиентов
 
 #Удаление клиентов
-@dp.callback_query(F.data.startswitch("del_"))
+@dp.callback_query(F.data.startswith("del_"))
 async def delete_client(callback:CallbackQuery):
     client_id=callback.data.split("_")[1]
     supabase.table("clients").delete().eq("id",client_id).execute()
@@ -118,7 +118,7 @@ async def delete_client(callback:CallbackQuery):
 #Удаление клиентов
 
 #Редактирование записей
-@dp.callback_query(F.data.endswitch("edit_"))
+@dp.callback_query(F.data.startwith("edit_"))
 async def edit_client_start(callback:CallbackQuery, state:FSMContext):
     client_id=callback.data.split("_")[1]
     await state.update_data(edititing_client_id=client_id)
