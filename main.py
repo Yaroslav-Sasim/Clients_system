@@ -12,6 +12,9 @@ from aiohttp import web
 from dotenv import load_dotenv
 from supabase import Client, create_client
 from aiogram.fsm.state import State, StatesGroup
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
+from aiogram import F
+
 
 
 load_dotenv()
@@ -33,9 +36,19 @@ bot = Bot(token=BOT_TOKEN)
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 dp = Dispatcher()
 
+#Добавление записей
 class AddClient(StatesGroup):
     waiting_for_name=State()
     waiting_for_mail=State()
+#Добавление записей
+
+# Редактирование записей
+class EditClient(StatesGroup):
+    waiting_for_name = State()
+    waiting_for_mail = State()
+
+
+# Редактирование записей
 
 @dp.message(CommandStart())
 async def cmd_start(message: Message):
@@ -43,7 +56,7 @@ async def cmd_start(message: Message):
       "Добро пожаловать!\nНажмите /list для просмотра клиентов."
   )
 
-
+#Вывод клиентов
 @dp.message(Command("list"))
 async def cmd_list(message: Message):
   try:
@@ -55,19 +68,23 @@ async def cmd_list(message: Message):
 
     text = "📋 Клиенты из базы:\n"
     for client in clients:
-      text += f"\nИмя: {client.get('name')}"
-      text += f"\nПочта: {client.get('mail')}"
-      text += "\n-------------------\n"
-    await message.answer(text)
+      text =f"Имя: {client.get('name')}\nПочта: {client.get('email')}"
+      button = InlineKeyboardButton(text="Удалить", callback_data=f"del_{client.get('id')}")
+      edit_button = InlineKeyboardButton(text="Редактировать", callback_data=f"edit_{client.get('id')}")
+      keyboard = InlineKeyboardMarkup(inline_keyboard=[[button,edit_button]])
+
+      await message.answer(text, reply_markup=keyboard)
   except Exception as e:
     await message.answer(f"Ошибка чтения: {e}")
-
+#Вывод клиентов
 
 async def on_startup(bot: Bot) -> None:
   if WEBHOOK_HOST:
     await bot.set_webhook(WEBHOOK_URL)
     logging.info(f"Webhook установлен на {WEBHOOK_URL}")
 
+
+#Добавление клиентов
 @dp.message(Command("add"))
 async def cmd_add(message: Message, state:FSMContext):
     await message.answer("Введите имя клиента:")
@@ -89,7 +106,56 @@ async def process_mail(message: Message, state:FSMContext):
     except Exception as e:
         await message.answer("Ошибка записи")
         await state.clear()
+#Добавление клиентов
 
+#Удаление клиентов
+@dp.callback_query(F.data.startswitch("del_"))
+async def delete_client(callback:CallbackQuery):
+    client_id=callback.data.split("_")[1]
+    supabase.table("clients").delete().eq("id",client_id).execute()
+    await callback.answer("Клиент удален",show_alert=True)
+    await callback.message.delete()
+#Удаление клиентов
+
+#Редактирование записей
+@dp.callback_query(F.data.endswitch("edit_"))
+async def edit_client_start(callback:CallbackQuery, state:FSMContext):
+    client_id=callback.data.split("_")[1]
+    await state.update_data(edititing_client_id=client_id)
+    await callback.message.answer("Введите новое имя клиента")
+    await state.set_state(EditClient.waiting_for_name)
+    await callback.answer()
+
+
+@dp.message(EditClient.waiting_for_name)
+async def process_edit_name(message: Message, state: FSMContext):
+    await state.update_data(name=message.text)
+
+    await message.answer("Введите новую почту клиента:")
+    await state.set_state(EditClient.waiting_for_mail)
+
+
+@dp.message(EditClient.waiting_for_mail)
+async def process_edit_mail(message: Message, state: FSMContext):
+    await state.update_data(mail=message.text)
+
+    data = await state.get_data()
+    client_id = data.get("client_id")
+    new_name = data.get("name")
+    new_mail = data.get("mail")
+
+    try:
+        # Обновляем строку в базе данных
+        supabase.table("clients").update({
+            "name": new_name,
+            "mail": new_mail
+        }).eq("id", client_id).execute()
+
+        await message.answer(f"✅ Данные клиента успешно обновлены!\n\nИмя: {new_name}\nПочта: {new_mail}")
+    except Exception as e:
+        await message.answer(f"Ошибка обновления: {e}")
+
+    await state.clear()
 
 def main():
   dp.startup.register(on_startup)
