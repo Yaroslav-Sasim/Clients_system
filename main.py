@@ -58,7 +58,7 @@ async def cmd_list(message: Message):
       text += f"\nИмя: {client.get('name')}"
       text += f"\nПочта: {client.get('mail')}"
       text += "\n-------------------\n"
-    await message.answer(text, parse_mode="Markdown")
+    #await message.answer(text, parse_mode="Markdown")
   except Exception as e:
     await message.answer(f"Ошибка чтения: {e}")
 
