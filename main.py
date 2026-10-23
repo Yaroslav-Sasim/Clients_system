@@ -53,12 +53,12 @@ async def cmd_list(message: Message):
       await message.answer("База пустая")
       return
 
-    text = "📋 **Клиенты из базы:**\n"
+    text = "📋 Клиенты из базы:\n"
     for client in clients:
       text += f"\nИмя: {client.get('name')}"
       text += f"\nПочта: {client.get('mail')}"
       text += "\n-------------------\n"
-    #await message.answer(text, parse_mode="Markdown")
+    await message.answer(text)
   except Exception as e:
     await message.answer(f"Ошибка чтения: {e}")
 
