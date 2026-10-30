@@ -68,7 +68,12 @@ async def cmd_list(message: Message):
 
     text = "📋 Клиенты из базы:\n"
     for client in clients:
-      text =f"Имя: {client.get('name')}\nПочта: {client.get('email')}"
+      name=client.get("name") or client.get("Имя") or "Не указано"
+      mail=(client.get("mail")
+            or client.get("mail")
+            or client.get("Mail")
+            or "Не указано")
+      text =f"Имя: {name}\nПочта:{mail}"
       button = InlineKeyboardButton(text="Удалить", callback_data=f"del_{client.get('id')}")
       edit_button = InlineKeyboardButton(text="Редактировать", callback_data=f"edit_{client.get('id')}")
       keyboard = InlineKeyboardMarkup(inline_keyboard=[[button,edit_button]])
