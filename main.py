@@ -6,7 +6,14 @@ from aiogram import Bot, Dispatcher, F
 from aiogram.filters import Command, CommandStart
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
-from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup, Message
+from aiogram.types import (
+    CallbackQuery,
+    InlineKeyboardButton,
+    InlineKeyboardMarkup,
+    KeyboardButton,
+    ReplyKeyboardMarkup,
+    Message,
+)
 from aiogram.webhook.aiohttp_server import SimpleRequestHandler, setup_application
 from aiohttp import web
 from dotenv import load_dotenv
@@ -29,6 +36,14 @@ bot = Bot(token=BOT_TOKEN)
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 dp = Dispatcher()
 
+# Создаем постоянную клавиатуру (UI кнопки под чатом)
+main_menu_keyboard = ReplyKeyboardMarkup(
+    keyboard=[
+        [KeyboardButton(text="📋 Список клиентов"), KeyboardButton(text="➕ Добавить клиента")]
+    ],
+    resize_keyboard=True  # Делает кнопки аккуратными и компактными по размеру экрана
+)
+
 
 # Состояния FSM для добавления
 class AddClient(StatesGroup):
@@ -45,18 +60,19 @@ class EditClient(StatesGroup):
 @dp.message(CommandStart())
 async def cmd_start(message: Message):
     await message.answer(
-        "Добро пожаловать!\nНажмите /list для просмотра клиентов."
+        "Добро пожаловать! Используйте кнопки меню ниже или команды.",
+        reply_markup=main_menu_keyboard
     )
 
 
-# Вывод клиентов
-@dp.message(Command("list"))
-async def cmd_list(message: Message):
+# Обработка нажатия на UI-кнопку "📋 Список клиентов"
+@dp.message(F.text == "📋 Список клиентов")
+async def btn_list_clients(message: Message):
     try:
         response = supabase.table("clients").select("*").execute()
         clients = response.data
         if not clients:
-            await message.answer("База пустая")
+            await message.answer("База пустая", reply_markup=main_menu_keyboard)
             return
 
         for client in clients:
@@ -74,17 +90,29 @@ async def cmd_list(message: Message):
         await message.answer(f"Ошибка чтения: {e}")
 
 
+# Также оставляем поддержку команды /list
+@dp.message(Command("list"))
+async def cmd_list(message: Message):
+    await btn_list_clients(message)
+
+
 async def on_startup(bot: Bot) -> None:
     if WEBHOOK_HOST:
         await bot.set_webhook(WEBHOOK_URL)
         logging.info(f"Webhook установлен на {WEBHOOK_URL}")
 
 
-# Добавление клиентов
-@dp.message(Command("add"))
-async def cmd_add(message: Message, state: FSMContext):
+# Обработка нажатия на UI-кнопку "➕ Добавить клиента"
+@dp.message(F.text == "➕ Добавить клиента")
+async def btn_add_client(message: Message, state: FSMContext):
     await message.answer("Введите имя клиента:")
     await state.set_state(AddClient.waiting_for_name)
+
+
+# Также оставляем поддержку команды /add
+@dp.message(Command("add"))
+async def cmd_add(message: Message, state: FSMContext):
+    await btn_add_client(message, state)
 
 
 @dp.message(AddClient.waiting_for_name)
@@ -103,9 +131,9 @@ async def process_mail(message: Message, state: FSMContext):
             "name": data.get("name"),
             "mail": data.get("mail")
         }).execute()
-        await message.answer("✅ Пользователь сохранен")
+        await message.answer("✅ Пользователь сохранен", reply_markup=main_menu_keyboard)
     except Exception as e:
-        await message.answer(f"❌ Ошибка записи: {e}")
+        await message.answer(f"❌ Ошибка записи: {e}", reply_markup=main_menu_keyboard)
     await state.clear()
 
 
@@ -118,7 +146,7 @@ async def delete_client(callback: CallbackQuery):
     await callback.message.delete()
 
 
-# Редактирование записей (Исправлен startswith и имя ключа state)
+# Редактирование записей
 @dp.callback_query(F.data.startswith("edit_"))
 async def edit_client_start(callback: CallbackQuery, state: FSMContext):
     client_id = callback.data.split("_")[1]
@@ -150,9 +178,10 @@ async def process_edit_mail(message: Message, state: FSMContext):
             "mail": new_mail
         }).eq("id", client_id).execute()
 
-        await message.answer(f"✅ Данные клиента успешно обновлены!\n\nИмя: {new_name}\nПочта: {new_mail}")
+        await message.answer(f"✅ Данные клиента успешно обновлены!\n\nИмя: {new_name}\nПочта: {new_mail}",
+                             reply_markup=main_menu_keyboard)
     except Exception as e:
-        await message.answer(f"❌ Ошибка обновления: {e}")
+        await message.answer(f"❌ Ошибка обновления: {e}", reply_markup=main_menu_keyboard)
 
     await state.clear()
 
