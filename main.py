@@ -138,12 +138,13 @@ async def process_mail(message: Message, state: FSMContext):
 
 
 # Удаление клиентов
+
 @dp.callback_query(F.data.startswith("del_"))
 async def delete_client(callback: CallbackQuery):
-    client_id = callback.data.split("_")[1]
-    supabase.table("clients").delete().eq("id", client_id).execute()
-    await callback.answer("Клиент удален", show_alert=True)
-    await callback.message.delete()
+  client_id = callback.data.split("_")[1]
+  supabase.table("clients").delete().eq("id", client_id).execute()
+  await callback.answer("Клиент удален", show_alert=True)
+  await callback.message.delete()
 
 
 # Редактирование записей
