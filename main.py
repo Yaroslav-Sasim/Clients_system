@@ -137,26 +137,24 @@ async def process_mail(message: Message, state: FSMContext):
     await state.clear()
 
 
-# Удаление клиентов
+# Удаление клиентов (поставим его сразу после команд, чтобы бот точно его перехватывал)
 @dp.callback_query(F.data.startswith("del_"))
 async def delete_client(callback: CallbackQuery):
-    # Вытаскиваем все после "del_"
-    client_id = callback.data.split("_")[1]
-
-    # Выводим в консоль/логи, чтобы проверить ID
-    print(f"DEBUG: Пытаюсь удалить клиента с ID = {client_id}")
-
     try:
-        # Делаем запрос на удаление в Supabase
-        response = supabase.table("clients").delete().eq("id", client_id).execute()
-        print(f"DEBUG: Ответ от Supabase: {response}")
+        # Достаем ID и преобразуем в целое число
+        client_id = int(callback.data.split("_")[1])
+        print(f"DEBUG: Пытаюсь удалить клиента ID: {client_id}")
 
-        # Меняем текст сообщения на плашку об удалении
+        # Выполняем запрос на удаление в Supabase
+        response = supabase.table("clients").delete().eq("id", client_id).execute()
+        print(f"DEBUG: Ответ Supabase: {response}")
+
+        # Меняем текст карточки в чате
         await callback.message.edit_text("❌ Запись удалена из базы")
         await callback.answer("Клиент успешно удален!", show_alert=True)
     except Exception as e:
-        print(f"DEBUG ОШИБКА: {e}")
-        await callback.answer(f"Ошибка при удалении: {e}", show_alert=True)
+        print(f"DEBUG ОШИБКА УДАЛЕНИЯ: {e}")
+        await callback.answer(f"Ошибка: {e}", show_alert=True)
 
 
 # Редактирование записей
