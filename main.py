@@ -490,6 +490,13 @@ async def delete_cancel(callback: CallbackQuery):
     await callback.answer("Отменено")
 
 
+# Любая кнопка, не попавшая в обработчики выше (например, от старого сообщения)
+@dp.callback_query()
+async def unknown_callback(callback: CallbackQuery):
+    logging.warning("Необработанный callback: %s", callback.data)
+    await callback.answer("Кнопка устарела. Откройте список заново.", show_alert=True)
+
+
 # ───────────────────────── Ошибки и запуск ─────────────────────────
 
 
@@ -505,7 +512,11 @@ async def on_error(event: ErrorEvent):
 
 async def on_startup(bot: Bot) -> None:
     if WEBHOOK_HOST:
-        await bot.set_webhook(WEBHOOK_URL)
+        await bot.set_webhook(
+            WEBHOOK_URL,
+            allowed_updates=dp.resolve_used_update_types(),  # message + callback_query
+            drop_pending_updates=True,
+        )
         logging.info(f"Webhook установлен на {WEBHOOK_URL}")
 
 
